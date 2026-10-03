@@ -1,0 +1,42 @@
+{
+  "name": "github-mermaid-review",
+  "version": "1.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Preview Mermaid diagrams and highlight side-effect candidates in GitHub pull request diffs",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "node scripts/build.ts",
+    "test": "node --test test/*.test.ts",
+    "test:browser": "node test/browser.mjs && node test/browser-side-effects.mjs",
+    "check": "npm run typecheck && npm test && npm run build && npm run test:browser",
+    "package": "node scripts/package.ts",
+    "test:package": "node test/package.mjs",
+    "demo": "npm run build && node scripts/record-demo.ts"
+  },
+  "dependencies": {
+    "mermaid": "12.1.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "0.3.4",
+    "@types/jsdom": "27.0.0",
+    "@types/node": "24.19.1",
+    "esbuild": "0.28.2",
+    "fflate": "0.8.3",
+    "jsdom": "27.4.0",
+    "playwright": "1.63.0",
+    "typescript": "7.0.2"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.12.0 <25"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SuguruOoki/github-mermaid-review.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SuguruOoki/github-mermaid-review/issues"
+  },
+  "homepage": "https://github.com/SuguruOoki/github-mermaid-review#readme"
+}

@@ -1,0 +1,59 @@
+:root {
+  color-scheme: light;
+  font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #1f2328;
+  background: #ffffff;
+  --border: #d1d9e0;
+  --muted: #59636e;
+  --surface: #f6f8fa;
+  --before: #ffebe9;
+  --after: #dafbe1;
+  --error: #b62324;
+  --focus: #0969da;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  color: #f0f6fc;
+  background: #0d1117;
+  --border: #3d444d;
+  --muted: #9198a1;
+  --surface: #151b23;
+  --before: #3d1619;
+  --after: #122f1d;
+  --error: #ff7b72;
+  --focus: #58a6ff;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+#app { padding: 12px; }
+p { margin: 0; }
+.intro, .waiting, .empty { color: var(--muted); }
+.intro { margin-bottom: 12px; font-size: 12px; }
+.columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.column { min-width: 0; }
+.column h2 { margin: 0 0 8px; padding: 7px 10px; border-radius: 6px; font-size: 13px; font-weight: 600; }
+.column.before h2 { background: var(--before); }
+.column.after h2 { background: var(--after); }
+.empty { padding: 12px; border: 1px dashed var(--border); border-radius: 6px; }
+.diagram { margin-bottom: 12px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.diagram-header { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 7px 10px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.diagram h3 { margin: 0; font-size: 12px; font-weight: 500; }
+.zoom-controls { display: flex; align-items: center; gap: 3px; }
+button { color: inherit; font: inherit; font-size: 12px; background: transparent; border: 1px solid var(--border); border-radius: 4px; min-width: 27px; height: 25px; padding: 0 6px; cursor: pointer; }
+button:hover { background: var(--surface); filter: brightness(0.94); }
+button:disabled { cursor: default; opacity: 0.45; }
+button:focus-visible, summary:focus-visible, .viewport:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.viewport { overflow: auto; max-height: 640px; padding: 14px; }
+.canvas { min-width: 0; }
+.canvas > svg { display: block; max-width: none !important; }
+.loading { color: var(--muted); }
+.error { color: var(--error); white-space: pre-wrap; overflow-wrap: anywhere; }
+details { border-top: 1px solid var(--border); }
+summary { padding: 7px 10px; cursor: pointer; color: var(--muted); font-size: 12px; }
+pre { margin: 0; padding: 10px; max-height: 300px; overflow: auto; border-top: 1px solid var(--border); background: var(--surface); font: 12px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace; tab-size: 2; }
+
+@media (max-width: 700px) {
+  .columns { grid-template-columns: minmax(0, 1fr); }
+}
