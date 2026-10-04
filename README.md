@@ -85,7 +85,7 @@ Mermaid 12.1.0 を同梱しています。GitHub 本体の描画バージョン�
 
 ## データの扱い
 
-図は同梱の Mermaid でローカルに描画します。GitHub API、外部描画サービス、アクセス解析は使いません。コードや図の保存・送信処理もありません。
+図は同梱の Mermaid でローカルに描画します。GitHub API、外部描画サービス、アクセス解析は使いません。コードや図の保存・送信処理もありません。詳しくは[プライバシーポリシー](PRIVACY.md)にまとめています。
 
 ページ内での移動にも追従するため、スクリプトの適用先は `https://github.com/*` です。実際にプレビューを追加するのは PR 差分画面だけです。描画部分は拡張 API と GitHub の DOM にアクセスできない sandbox に分離し、外部通信を CSP で遮断しています。
 
@@ -108,13 +108,15 @@ npm run typecheck     # strict 型チェック
 npm test              # 抽出・判定の単体テスト
 npm run build         # dist を生成
 npm run test:browser  # Chrome 拡張としての表示・操作テスト
-npm run package       # 配布 ZIP と SHA256SUMS.txt を release に生成
+npm run package       # ローカル用・ストア用 ZIP と SHA256SUMS.txt を生成
 npm run test:package  # ZIP を展開し、その中の拡張でブラウザテスト
 ```
 
 `npm run build` の後は、Chrome の拡張機能画面でこの拡張の再読み込みボタンを押し、GitHub のページも更新してください。配布 ZIP は新しい一時フォルダでビルドし、必要なファイルだけを含めます。`dist`・テスト結果・ローカル設定は Git へ含めません。
 
 `src/parse.ts` が Mermaid ブロックの抽出、`src/github-dom.ts` が差分の読み取り、`src/side-effects.ts` が副作用候補の判定を担当します。`src/content.ts`・`src/side-effect-ui.ts` がページへの表示、`src/viewer.ts` が図の描画です。
+
+Chrome Web Store への提出には、`npm run package` でできる `release/github-mermaid-review-webstore.zip` を使います。`manifest.json` が ZIP の直下にある形式です。ストア用画像と掲載文は `docs/store/` にあります。スクリーンショットは `node scripts/record-demo.ts --store-screenshots` で再生成できます。
 
 GIF を撮り直す場合は [FFmpeg](https://ffmpeg.org/download.html) をインストールして `npm run demo` を実行します。合成した差分画面で実際の拡張を操作し、`docs/assets/` の GIF を更新します。
 

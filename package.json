@@ -1,6 +1,6 @@
 {
   "name": "github-mermaid-review",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "type": "module",
   "description": "Preview Mermaid diagrams and highlight side-effect candidates in GitHub pull request diffs",

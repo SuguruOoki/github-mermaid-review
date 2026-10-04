@@ -11,13 +11,14 @@ import type { BrowserContext, Locator, Page } from 'playwright';
 // Every visible file, repository name and review is a synthetic fixture. No
 // account, live GitHub request, user browser profile or existing screenshot is used.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const output = path.join(root, 'docs/assets');
+const storeScreenshots = process.argv.includes('--store-screenshots');
+const output = path.join(root, storeScreenshots ? 'docs/store/screenshots' : 'docs/assets');
 const temporary = await mkdtemp(path.join(tmpdir(), 'github-mermaid-demo-'));
 const run = promisify(execFile);
 const ffmpeg = process.env.FFMPEG_PATH ?? 'ffmpeg';
 const baseUrl = 'https://github.com/demo/review-examples/pull/1/files';
-const width = 1180;
-const height = 790;
+const width = storeScreenshots ? 1280 : 1180;
+const height = storeScreenshots ? 800 : 790;
 const escape = (value: string): string => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;')
   .replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 
@@ -158,7 +159,7 @@ try {
   await mkdir(output, { recursive: true });
   const extension = path.join(root, 'dist');
   await stat(path.join(extension, 'manifest.json'));
-  await run(ffmpeg, ['-version']);
+  if (!storeScreenshots) await run(ffmpeg, ['-version']);
   context = await chromium.launchPersistentContext(path.join(temporary, 'profile'), {
     channel: 'chromium', headless: true, viewport: { width, height }, deviceScaleFactor: 1,
     ...(process.env.GMR_CHROMIUM_PATH ? { executablePath: process.env.GMR_CHROMIUM_PATH } : {}),
@@ -187,46 +188,87 @@ try {
   await iframe.locator('.after svg').waitFor();
   assert.equal(await iframe.locator('.error').count(), 0);
 
-  const mermaid = new Timeline(page, 'mermaid-preview');
-  await mermaid.caption('1 / 3 · Open Files changed — before and after diagrams appear automatically');
-  await mermaid.capture(2.2);
-  await mermaid.caption('2 / 3 · Open the source while keeping the diagram in view');
-  await mermaid.click(iframe.locator('.after .diagram summary'));
-  assert.equal(await iframe.locator('.after details').getAttribute('open'), '');
-  await mermaid.capture(2.3);
-  await mermaid.click(iframe.locator('.after .diagram summary'));
-  await mermaid.caption('3 / 3 · Zoom in for a closer review');
-  const zoom = iframe.getByRole('button', { name: '図を拡大', exact: true }).last();
-  await mermaid.click(zoom);
-  await mermaid.click(zoom);
-  assert.equal(await iframe.getByRole('button', { name: '図を元の倍率に戻す', exact: true }).last().textContent(), '150%');
-  await mermaid.capture(2.1);
-  await mermaid.click(iframe.getByRole('button', { name: '図を元の倍率に戻す', exact: true }).last());
-  await mermaid.capture(1.2);
-  const diagramResult = await mermaid.save();
+  if (storeScreenshots) {
+    // Store images keep the real extension UI and synthetic-data disclosure,
+    // but omit the animated walkthrough's step captions and pointer.
+    const waitForHeader = async (): Promise<void> => {
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      const bounds = await page.locator('.demo-header, .demo-brand strong, .demo-badge').evaluateAll(elements => elements.map(element => {
+        const { x, y, width, height } = element.getBoundingClientRect();
+        return { x, y, width, height };
+      }));
+      assert.equal(bounds.length, 3, 'Store screenshot must retain the title and synthetic-data disclosure');
+      for (const box of bounds) {
+        assert.ok(box.width > 0 && box.height > 0 && box.x >= 0 && box.y >= 0
+          && box.x + box.width <= width && box.y + box.height <= height,
+        `Store screenshot header must be fully inside the viewport: ${JSON.stringify(box)}`);
+      }
+    };
+    const prepareScreenshot = async (): Promise<void> => {
+      await page.locator('#demo-step, .demo-pointer').evaluateAll(elements => elements.forEach(element => element.remove()));
+      await waitForHeader();
+    };
+    await prepareScreenshot();
+    await page.screenshot({ path: path.join(output, 'mermaid-preview.png'), animations: 'disabled' });
 
-  await page.goto(`${baseUrl}?demo=effects`);
-  await page.locator('td[data-gmr-side-effect]').first().waitFor();
-  assert.equal(await page.locator('td[data-gmr-side-effect]').count(), 3);
-  const effects = new Timeline(page, 'side-effect-review');
-  await effects.caption('1 / 3 · Orange outlines mark changed lines with possible side effects');
-  await effects.capture(2.2);
-  await effects.caption('2 / 3 · Open the candidate list to see files, lines and matching patterns');
-  await effects.click(page.locator('.effects-summary'));
-  assert.equal(await page.locator('.effects-candidate').count(), 3);
-  await effects.capture(3);
-  await effects.caption('3 / 3 · Click a candidate — jump to the line and continue reviewing');
-  await effects.click(page.locator('.effects-candidate').filter({ hasText: 'localStorage' }));
-  assert.equal(await page.locator('td[data-gmr-side-effect-selected]').count(), 1);
-  assert.equal(await page.locator('.effects-panel').getAttribute('open'), null);
-  await effects.capture(3.1);
-  await effects.caption('Review the surrounding code. Candidates are hints, not proof of side effects.');
-  await effects.capture(1.2);
-  const effectsResult = await effects.save();
-  assert.deepEqual(pageErrors, [], 'Demo must not hide page errors');
-  assert.deepEqual(unexpectedRequests, [], 'Demo must not request external services');
-  console.log(JSON.stringify({ viewport: { width, height }, loop: 'infinite', syntheticOnly: true,
-    pageErrors, unexpectedRequests, demos: [diagramResult, effectsResult] }, null, 2));
+    await page.goto(`${baseUrl}?demo=effects`);
+    await page.locator('td[data-gmr-side-effect]').first().waitFor();
+    assert.equal(await page.locator('td[data-gmr-side-effect]').count(), 3);
+    await page.locator('.effects-summary').click();
+    assert.equal(await page.locator('.effects-candidate').count(), 3);
+    assert.equal(await page.locator('.effects-panel').getAttribute('open'), '');
+    await prepareScreenshot();
+    await page.locator('#preferences').evaluate(element => {
+      window.scrollTo(0, element.getBoundingClientRect().top + window.scrollY - 420);
+    });
+    await waitForHeader();
+    await page.screenshot({ path: path.join(output, 'side-effect-review.png'), animations: 'disabled' });
+    assert.deepEqual(pageErrors, [], 'Store screenshots must not hide page errors');
+    assert.deepEqual(unexpectedRequests, [], 'Store screenshots must not request external services');
+    console.log(JSON.stringify({ viewport: { width, height }, syntheticOnly: true, pageErrors, unexpectedRequests,
+      screenshots: ['mermaid-preview.png', 'side-effect-review.png'].map(filename => path.relative(root, path.join(output, filename))) }, null, 2));
+  } else {
+    const mermaid = new Timeline(page, 'mermaid-preview');
+    await mermaid.caption('1 / 3 · Open Files changed — before and after diagrams appear automatically');
+    await mermaid.capture(2.2);
+    await mermaid.caption('2 / 3 · Open the source while keeping the diagram in view');
+    await mermaid.click(iframe.locator('.after .diagram summary'));
+    assert.equal(await iframe.locator('.after details').getAttribute('open'), '');
+    await mermaid.capture(2.3);
+    await mermaid.click(iframe.locator('.after .diagram summary'));
+    await mermaid.caption('3 / 3 · Zoom in for a closer review');
+    const zoom = iframe.getByRole('button', { name: '図を拡大', exact: true }).last();
+    await mermaid.click(zoom);
+    await mermaid.click(zoom);
+    assert.equal(await iframe.getByRole('button', { name: '図を元の倍率に戻す', exact: true }).last().textContent(), '150%');
+    await mermaid.capture(2.1);
+    await mermaid.click(iframe.getByRole('button', { name: '図を元の倍率に戻す', exact: true }).last());
+    await mermaid.capture(1.2);
+    const diagramResult = await mermaid.save();
+
+    await page.goto(`${baseUrl}?demo=effects`);
+    await page.locator('td[data-gmr-side-effect]').first().waitFor();
+    assert.equal(await page.locator('td[data-gmr-side-effect]').count(), 3);
+    const effects = new Timeline(page, 'side-effect-review');
+    await effects.caption('1 / 3 · Orange outlines mark changed lines with possible side effects');
+    await effects.capture(2.2);
+    await effects.caption('2 / 3 · Open the candidate list to see files, lines and matching patterns');
+    await effects.click(page.locator('.effects-summary'));
+    assert.equal(await page.locator('.effects-candidate').count(), 3);
+    await effects.capture(3);
+    await effects.caption('3 / 3 · Click a candidate — jump to the line and continue reviewing');
+    await effects.click(page.locator('.effects-candidate').filter({ hasText: 'localStorage' }));
+    assert.equal(await page.locator('td[data-gmr-side-effect-selected]').count(), 1);
+    assert.equal(await page.locator('.effects-panel').getAttribute('open'), null);
+    await effects.capture(3.1);
+    await effects.caption('Review the surrounding code. Candidates are hints, not proof of side effects.');
+    await effects.capture(1.2);
+    const effectsResult = await effects.save();
+    assert.deepEqual(pageErrors, [], 'Demo must not hide page errors');
+    assert.deepEqual(unexpectedRequests, [], 'Demo must not request external services');
+    console.log(JSON.stringify({ viewport: { width, height }, loop: 'infinite', syntheticOnly: true,
+      pageErrors, unexpectedRequests, demos: [diagramResult, effectsResult] }, null, 2));
+  }
 } finally {
   await context?.close();
   await rm(temporary, { recursive: true, force: true });

@@ -9,6 +9,11 @@ export async function buildExtension(dist: string): Promise<void> {
   const bundled = await build({entryPoints: [path.join(root, 'src/content.ts'), path.join(root, 'src/viewer.ts')], outdir: dist, bundle: true, format: 'iife', target: 'chrome120', minify: true, legalComments: 'eof', logLevel: 'info', metafile: true, loader: { '.css': 'text' }});
   for (const name of ['viewer.html', 'viewer.css', 'content.css']) await cp(path.join(root, 'src', name), path.join(dist, name));
   await cp(path.join(root, 'manifest.json'), path.join(dist, 'manifest.json'));
+  await mkdir(path.join(dist, 'icons'), { recursive: true });
+  for (const size of [16, 32, 48, 128]) {
+    const name = `icon${size}.png`;
+    await cp(path.join(root, 'src/icons', name), path.join(dist, 'icons', name));
+  }
   const license = await readFile(path.join(root, 'node_modules/mermaid/LICENSE'), 'utf8');
   await writeFile(path.join(dist, 'MERMAID-LICENSE.txt'), license);
   const packages = new Set<string>();
